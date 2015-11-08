@@ -39,5 +39,24 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-    // Put your code here:
+    Not (in=instruction[15], out=AorC);
+    Mux16 (a=ALUout, b=instruction, sel=AorC, out=regAin);
+    Or (a=AorC, b=instruction[5], out=ARLoad);
+    ARegister (in=regAin, load=ARLoad, out=regAout, out[0..14]=addressM, out=pcIn);
+    Mux16 (a=regAout, b=inM, sel=instruction[12], out=ALUy);
+    And (a=instruction[15], b=instruction[4], out=DLoad);
+    DRegister (in=ALUout, load=DLoad, out=ALUx);
+    ALU (x=ALUx, y=ALUy, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=outM, out=ALUout, zr=ALUzr, ng=ALUng);
+    Or (a=ALUzr, b=ALUng, out=andOut);
+    Not (in=andOut, out=ALUpo);
+    And (a=instruction[0], b=instruction[1], out=out01);
+    Mux (a=false, b=ALUng, sel=instruction[2], out=ngOut);
+    Mux (a=false, b=ALUzr, sel=instruction[1], out=zrOut);
+    Mux (a=false, b=ALUpo, sel=instruction[0], out=poOut);
+    And (a=ngOut, b=zrOut, out=ngANDzr);
+    And (a=ngANDzr, b=poOut, out=JMPout);
+    Or8Way (in[0]=ngOut, in[1]=zrOut, in[2]=poOut, in[3]=JMPout, out=jumpOut);
+    And (a=instruction[15], b=jumpOut, out=pcLoad);
+    PC (in=pcIn, load=pcLoad, inc=true, reset=reset, out[0..14]=pc);
+    And (a=instruction[15], b=instruction[3], out=writeM);
 }
