@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+__author__ = 'Tao Zang'
 
 import sys
 import re
+import os
 from CodeWriter import CodeWriter
 
 class Parser(object):
@@ -40,9 +42,10 @@ class Parser(object):
 		return match.groups()[0];
 
 if __name__ == '__main__':
-	filename = sys.argv[1];
-	parser = Parser(filename);
-	writer = CodeWriter(filename);
+	path = os.path.dirname(sys.argv[1]);
+	filename = os.path.basename(sys.argv[1]);
+	parser = Parser(path + '/' + filename);
+	writer = CodeWriter(path, filename.split('.')[0]);
 	while parser.hasMoreCommands():
 		command = parser.commandType();
 		if(command == 'push' or command == 'pop'):
