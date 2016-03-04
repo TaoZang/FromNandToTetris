@@ -7,13 +7,12 @@ import os
 
 class CodeWriter(object):
 	def __init__(self, path, name):
-		self.prefix = name;
 		self.output = open(path + '/' + name + '.asm', 'w');
 		self.labels = {'eq': 0, 'gt': 0, 'lt': 0, 'ret_return': 0};
 		self.symbols = {'local': 'LCL', 'argument': 'ARG', 'this': 'THIS', 'that': 'THAT', 'add': '+', 'sub': '-', 'and': '&', 'or': '|', 'neg': '-', 'not': '!'};
 		self.snaps = {'PUSH_D': '@SP\nA=M\nM=D\n@SP\nM=M+1\n',
 					  'POP_R13': '@SP\nAM=M-1\nD=M\n@R13\nA=M\nM=D\n'};
-		# self.writeInit();
+		self.writeInit();
 
 	def writeArithmetic(self, command):
 		instruction = '';
@@ -34,7 +33,7 @@ class CodeWriter(object):
 			self.labels[command] += 1;
 		self.output.write(instruction);
 
-	def writePushPop(self, command, segment, index):
+	def writePushPop(self, command, segment, index, prefix):
 		instruction = '';
 		if (command == 'push'):
 			if (segment == 'constant'):
@@ -44,7 +43,7 @@ class CodeWriter(object):
 			elif (segment == 'pointer'):
 				instruction = '@' + index + '\nD=A\n@R3\nA=D+A\nD=M\n' + self.snaps['PUSH_D'];
 			elif (segment == 'static'):
-				instruction = '@' + self.prefix + '.' + index + '\nD=M\n' + self.snaps['PUSH_D'];
+				instruction = '@' + prefix + '.' + index + '\nD=M\n' + self.snaps['PUSH_D'];
 			elif (segment == 'local' or segment == 'argument' or segment == 'this' or segment == 'that'):
 				instruction = '@' + index + '\nD=A\n@' + self.symbols[segment] + '\nA=D+M\nD=M\n' + self.snaps['PUSH_D'];
 		elif (command == 'pop'):
@@ -53,54 +52,37 @@ class CodeWriter(object):
 			elif (segment == 'pointer'):
 				instruction = '@' + index + '\nD=A\n@R3\nD=D+A\n@R13\nM=D\n' + self.snaps['POP_R13'];
 			elif (segment == 'static'):
-				instruction = '@' + self.prefix + '.' + index + '\nD=A\n@R13\nM=D\n' + self.snaps['POP_R13'];
+				instruction = '@' + prefix + '.' + index + '\nD=A\n@R13\nM=D\n' + self.snaps['POP_R13'];
 			elif (segment == 'local' or segment == 'argument' or segment == 'this' or segment == 'that'):
 				instruction = '@' + index + '\nD=A\n@' + self.symbols[segment] +'\nD=D+M\n@R13\nM=D\n' + self.snaps['POP_R13'];
 		self.output.write(instruction);
 
 	def writeLabel(self, functionName, label):
-		if(functionName != ''):
-			functionName = functionName + '$';
-		self.output.write('(' + functionName + label + ')\n');
+		self.output.write('(' + functionName + '$' + label + ')\n');
 
 	def writeIf(self, functionName, label):
-		if(functionName != ''):
-			functionName = functionName + '$';
-		self.output.write('@SP\nAM=M-1\nD=M\n@' + functionName + label + '\nD;JGT\n');
+		self.output.write('@SP\nAM=M-1\nD=M\n@' + functionName + '$' + label + '\nD;JNE\n');
 
 	def writeGoto(self, functionName, label):
-		if(functionName != ''):
-			functionName = functionName + '$';
-		self.output.write('@' + functionName + label + '\n0;JMP\n');
+		self.output.write('@' + functionName + '$' + label + '\n0;JMP\n');
 
 	def writeFunction(self, functionName, numlocals):
 		self.output.write('(' + functionName + ')\n');
 		n = 0;
 		while(n < int(numlocals)):
 			n += 1;
-			self.writePushPop('push', 'constant', '0');
+			self.writePushPop('push', 'constant', '0', '');
 
 	def writeReturn(self):
-		#-------------参照函数调用协议的标准实现
-		self.output.write('@LCL\nD=M\n@R5\nM=D\n'); #hold LCL value
-		self.output.write('@5\nD=A\n@R5\nD=M-D\n@R6\nM=D\n'); #hold return value
+		self.output.write('@LCL\nD=M\n@R13\nM=D\n'); #hold LCL value
+		self.output.write('@5\nD=A\n@R13\nA=M-D\nD=M\n@R14\nM=D\n'); #hold return value
 		self.output.write('@SP\nAM=M-1\nD=M\n@ARG\nA=M\nM=D\n'); #*ARG = pop()
 		self.output.write('D=A+1\n@SP\nM=D\n') #restore SP
-		self.output.write('@R5\nAM=M-1\nD=M\n@THAT\nM=D\n'); #restore THAT
-		self.output.write('@R5\nAM=M-1\nD=M\n@THIS\nM=D\n'); #restore THIS
-		self.output.write('@R5\nAM=M-1\nD=M\n@ARG\nM=D\n'); #restore ARG
-		self.output.write('@R5\nAM=M-1\nD=M\n@LCL\nM=D\n'); #restore LCL
-		self.output.write('@R6\nA=M\n0;JMP\n'); #return
-
-		#-------------与函数调用协议不同，简化了两个步骤
-		# self.output.write('@LCL\nD=M\n@R5\nM=D\n'); #hold LCL value
-		# self.output.write('@SP\nAM=M-1\nD=M\n@ARG\nA=M\nM=D\n'); #*ARG = pop()
-		# self.output.write('D=A+1\n@SP\nM=D\n') #restore SP
-		# self.output.write('@R5\nAM=M-1\nD=M\n@THAT\nM=D\n'); #restore THAT
-		# self.output.write('@R5\nAM=M-1\nD=M\n@THIS\nM=D\n'); #restore THIS
-		# self.output.write('@R5\nAM=M-1\nD=M\n@ARG\nM=D\n'); #restore ARG
-		# self.output.write('@R5\nAM=M-1\nD=M\n@LCL\nM=D\n'); #restore LCL
-		# self.output.write('@R5\nAM=M-1\nA=M\n0;JMP\n'); #return
+		self.output.write('@R13\nAM=M-1\nD=M\n@THAT\nM=D\n'); #restore THAT
+		self.output.write('@R13\nAM=M-1\nD=M\n@THIS\nM=D\n'); #restore THIS
+		self.output.write('@R13\nAM=M-1\nD=M\n@ARG\nM=D\n'); #restore ARG
+		self.output.write('@R13\nAM=M-1\nD=M\n@LCL\nM=D\n'); #restore LCL
+		self.output.write('@R14\nA=M\n0;JMP\n'); #return
 
 	def writeCall(self, functionName, args):
 		retAddress = 'RET_ADDRESS_CALL' + str(self.labels['ret_return']);

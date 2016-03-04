@@ -41,31 +41,43 @@ class Parser(object):
 		match = re.match(r'[\w_-]+\s+[\w_.-]+\s+([\w_-]+)', self.instructions[self.index]);
 		return match.groups()[0];
 
+	def parseFile(path, writer):
+		parser = Parser(path);
+		className = os.path.basename(path).split('.')[0];
+		functionName = '';
+		while parser.hasMoreCommands():
+			command = parser.commandType();
+			if(command == 'push' or command == 'pop'):
+				writer.writePushPop(command, parser.arg1(), parser.arg2(), className);
+			elif(command == 'label'):
+				writer.writeLabel(functionName, parser.arg1());
+			elif(command == 'if-goto'):
+				writer.writeIf(functionName, parser.arg1());
+			elif(command == 'goto'):
+				writer.writeGoto(functionName, parser.arg1());
+			elif(command == 'function'):
+				functionName = parser.arg1();
+				writer.writeFunction(functionName, parser.arg2());
+			elif(command == 'return'):
+				writer.writeReturn();
+			elif(command == 'call'):
+				writer.writeCall(parser.arg1(), parser.arg2());
+			else:
+				writer.writeArithmetic(command);
+			parser.advance();	
+
 if __name__ == '__main__':
-	path = os.path.dirname(sys.argv[1]);
-	filename = os.path.basename(sys.argv[1]);
-	parser = Parser(path + '/' + filename);
-	writer = CodeWriter(path, filename.split('.')[0]);
-	functionName = '';
-	while parser.hasMoreCommands():
-		command = parser.commandType();
-		if(command == 'push' or command == 'pop'):
-			writer.writePushPop(command, parser.arg1(), parser.arg2());
-		elif(command == 'label'):
-			writer.writeLabel(functionName, parser.arg1());
-		elif(command == 'if-goto'):
-			writer.writeIf(functionName, parser.arg1());
-		elif(command == 'goto'):
-			writer.writeGoto(functionName, parser.arg1());
-		elif(command == 'function'):
-			functionName = parser.arg1();
-			writer.writeFunction(functionName, parser.arg2());
-		elif(command == 'return'):
-			functionName = '';
-			writer.writeReturn();
-		elif(command == 'call'):
-			writer.writeCall(parser.arg1(), parser.arg2());
-		else:
-			writer.writeArithmetic(command);
-		parser.advance();
-	writer.close();
+	arg = sys.argv[1];
+	filename = os.path.basename(arg).split('.')[0];
+	if os.path.isfile(arg):
+		writer = CodeWriter(os.path.dirname(arg), filename);
+		Parser.parseFile(arg, writer);
+	else :
+		writer = CodeWriter(arg, filename);
+		files = [name for name in os.listdir(arg) if name.endswith('.vm')];
+		for file in files:
+			Parser.parseFile(arg + '/' + file, writer);
+
+
+
+
