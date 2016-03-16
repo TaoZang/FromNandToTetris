@@ -3,12 +3,15 @@
 // by Nisan and Schocken, MIT Press.
 // File name: projects/10/ArrayTest/Main.jack
 
-/** Computes the average of a sequence of integers. */
+/** Computes the average of a sequence of integers. 
+ *  sldfjlkjsdf
+ *  sljdflksjdf
+ */
 class Main {
     function void main() {
         var Array a;
-        var int length;
-		var int i, sum;
+        var int length;  /* kkkkkkkk */
+		var int i, sum; // HHHHHHHHH
 	
 		let length = Keyboard.readInt("HOW MANY NUMBERS? ");
 		let a = Array.new(length);
