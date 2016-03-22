@@ -13,7 +13,7 @@ class Main {
         var PongGame game;
 
 	do PongGame.newInstance();
-        let game = PongGame.getInstance();
+       	let game = PongGame.getInstance();
         do game.run();
 	do game.dispose();
 
