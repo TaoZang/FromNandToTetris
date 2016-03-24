@@ -1,0 +1,78 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Memory.jack
+
+/**
+ * Memory operations library.
+ */ 
+class Memory {
+    static int free;
+
+    /** Initializes memory parameters. */
+    function void init() {
+        let free = 2048;
+        do Memory.poke(free, 16383 - 2048);
+        return;
+    }
+
+    /** Returns the value of the main memory at the given address. */
+    function int peek(int address) {
+        var Array memory;
+        let memory = 0;
+        return memory[address];
+    }
+
+    /** Sets the value of the main memory at this address
+     *  to the given value. */
+    function void poke(int address, int value) {
+        var Array memory;
+        let memory = 0;
+        let memory[address] = value;
+        return;
+    }
+
+    /** finds and allocates from the heap a memory block of the 
+     *  specified size and returns a reference to its base address. */
+    function int alloc(int size) {
+        var int addr, prev, next;
+        var int length;
+        let addr = free;
+        while(true) {
+            let length = Memory.peek(addr);
+            if(length < size) {
+                let prev = addr;
+                let addr = Memory.peek(addr + 1);
+            } else {
+                let next = addr + size;
+                do Memory.poke(next, (length - size));
+                do Memory.poke(next + 1, Memory.peek(addr + 1));
+                if(free = addr) {
+                    let free = next;
+                } else {
+                    do Memory.poke(prev + 1, next);
+                }
+                return addr;
+            }
+        }
+        return free;
+    }
+
+    /** De-allocates the given object and frees its space. */
+    function void deAlloc(int object) {
+        var int prev, next;
+        var int length;
+        let prev = free;
+        while(true) {
+            if((prev < object) & (next > object)) {
+                let length = (next - prev) + Memory.peek(next);
+                do Memory.poke(prev, length);
+                do Memory.poke(prev + 1, Memory.peek(next + 1));
+            } else {
+                let prev = Memory.peek(prev + 1);
+                let next = Memory.peek(prev + 1);
+            }
+        }
+        return;
+    }
+}
